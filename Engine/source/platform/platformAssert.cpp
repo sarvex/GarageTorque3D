@@ -23,7 +23,7 @@
 #include <stdarg.h>
 
 #include "core/strings/stringFunctions.h"
-#include "console/console.h"
+#include "console/engineAPI.h"
 
 
 //-------------------------------------- STATIC Declaration
@@ -69,24 +69,6 @@ bool PlatformAssert::displayMessageBox(const char *title, const char *message, b
 }
 
 static const char *typeName[] = { "Unknown", "Fatal-ISV", "Fatal", "Warning" };
-//------------------------------------------------------------------------------
-static bool askToEnterDebugger(const char* message )
-{
-   static bool haveAsked = false;
-   static bool useDebugger = true;
-   if(!haveAsked )
-   {
-      static char tempBuff[1024];
-      dSprintf( tempBuff, 1024, "Torque has encountered an assertion with message\n\n"
-         "%s\n\n"
-         "Would you like to use the debugger? If you cancel, you won't be asked"
-         " again until you restart Torque.", message);
-
-      useDebugger = Platform::AlertOKCancel("Use debugger?", tempBuff );
-      haveAsked = true;
-   }
-   return useDebugger;
-}
 
 //--------------------------------------
 
@@ -185,8 +167,8 @@ const char* avar(const char *message, ...)
 
 //-----------------------------------------------------------------------------
 
-ConsoleFunction( Assert, void, 3, 3, "(condition, message) - Fatal Script Assertion" )
+DefineEngineFunction(Assert, void, (bool condition, const char* message),, "Fatal Script Assertion")
 {
-    // Process Assertion.
-    AssertISV( dAtob(argv[1]), argv[2] );
+   // Process Assertion.
+   AssertISV(condition, message);
 }

@@ -29,6 +29,10 @@
 #include "gui/containers/guiScrollCtrl.h"
 #include "gui/editor/inspector/customField.h"
 
+#include "gui/editor/inspector/entityGroup.h"
+#include "gui/editor/inspector/mountingGroup.h"
+#include "gui/editor/inspector/componentGroup.h"
+#include "T3D/components/component.h"
 
 IMPLEMENT_CONOBJECT(GuiInspector);
 
@@ -50,7 +54,8 @@ GuiInspector::GuiInspector()
    mOverDivider( false ),
    mMovingDivider( false ),
    mHLField( NULL ),
-   mShowCustomFields( true )
+   mShowCustomFields( true ),
+   mComponentGroupTargetId(-1)
 {
    mPadding = 1;
 }
@@ -564,30 +569,78 @@ void GuiInspector::refresh()
       ungroup = new GuiInspectorGroup( "Ungrouped", this );
       ungroup->setHeaderHidden( true );
       ungroup->setCanCollapse( false );
-      if( ungroup != NULL )
-      {
-         ungroup->registerObject();
-         mGroups.push_back( ungroup );
-         addObject( ungroup );
-      }   
+
+      ungroup->registerObject();
+      mGroups.push_back( ungroup );
+      addObject( ungroup );
    }
 
    // Put the 'transform' group first
    GuiInspectorGroup *transform = new GuiInspectorGroup( "Transform", this );
-   if( transform != NULL )
-   {
-      transform->registerObject();
-      mGroups.push_back( transform );
-      addObject( transform );
-   }
+
+   transform->registerObject();
+   mGroups.push_back(transform);
+   addObject(transform);
 
    // Always create the 'general' group (for fields without a group)      
    GuiInspectorGroup *general = new GuiInspectorGroup( "General", this );
-   if( general != NULL )
+
+   general->registerObject();
+   mGroups.push_back(general);
+   addObject(general);
+
+   //Entity inspector group
+   if (mTargets.first()->getClassRep()->isSubclassOf("Entity"))
    {
-      general->registerObject();
-      mGroups.push_back( general );
-      addObject( general );
+      //Put the GameObject group before everything that'd be gameobject-effecting, for orginazational purposes
+      GuiInspectorGroup *gameObject = new GuiInspectorGroup("GameObject", this);
+
+      gameObject->registerObject();
+      mGroups.push_back(gameObject);
+      addObject(gameObject);
+
+      GuiInspectorEntityGroup *components = new GuiInspectorEntityGroup("Components", this);
+      if (components != NULL)
+      {
+         components->registerObject();
+         mGroups.push_back(components);
+         addObject(components);
+      }
+
+      Entity* selectedEntity = dynamic_cast<Entity*>(mTargets.first().getObject());
+
+      U32 compCount = selectedEntity->getComponentCount();
+      //Now, add the component groups
+      for (U32 c = 0; c < compCount; ++c)
+      {
+         Component* comp = selectedEntity->getComponent(c);
+         
+         String compName;
+         if (comp->getFriendlyName() != StringTable->EmptyString())
+            compName = comp->getFriendlyName();
+         else
+            compName = comp->getComponentName();
+
+         StringBuilder captionString;
+         captionString.format("%s [%i]", compName.c_str(), comp->getId());
+
+         GuiInspectorGroup *compGroup = new GuiInspectorComponentGroup(captionString.data(), this, comp);
+         if (compGroup != NULL)
+         {
+            compGroup->registerObject();
+            mGroups.push_back(compGroup);
+            addObject(compGroup);
+         }
+      }
+
+      //Mounting group override
+      GuiInspectorGroup *mounting = new GuiInspectorMountingGroup("Mounting", this);
+      if (mounting != NULL)
+      {
+         mounting->registerObject();
+         mGroups.push_back(mounting);
+         addObject(mounting);
+      }
    }
 
    // Create the inspector groups for static fields.
@@ -605,26 +658,24 @@ void GuiInspector::refresh()
             
             if( !group && !isGroupFiltered( itr->pGroupname ) )
             {
-               GuiInspectorGroup *group = new GuiInspectorGroup( itr->pGroupname, this );
-               if( group != NULL )
+               GuiInspectorGroup *newGroup = new GuiInspectorGroup( itr->pGroupname, this );
+
+			   newGroup->registerObject();
+               if( !newGroup->getNumFields() )
                {
-                  group->registerObject();
-                  if( !group->getNumFields() )
-                  {
-                     #ifdef DEBUG_SPEW
-                     Platform::outputDebugString( "[GuiInspector] Removing empty group '%s'",
-                        group->getCaption().c_str() );
-                     #endif
+                  #ifdef DEBUG_SPEW
+                  Platform::outputDebugString( "[GuiInspector] Removing empty group '%s'",
+					  newGroup->getCaption().c_str() );
+                  #endif
                      
-                     // The group ended up having no fields.  Remove it.
-                     group->deleteObject();
-                  }
-                  else
-                  {
-                     mGroups.push_back( group );
-                     addObject( group );
-                  }
-               }            
+                  // The group ended up having no fields.  Remove it.
+				  newGroup->deleteObject();
+               }
+               else
+               {
+                  mGroups.push_back(newGroup);
+                  addObject(newGroup);
+               }
             }
          }
       }
@@ -634,12 +685,10 @@ void GuiInspector::refresh()
    if ( !isGroupFiltered( "Dynamic Fields" ) )
    {
       GuiInspectorGroup *dynGroup = new GuiInspectorDynamicGroup( "Dynamic Fields", this);
-      if( dynGroup != NULL )
-      {
-         dynGroup->registerObject();
-         mGroups.push_back( dynGroup );
-         addObject( dynGroup );
-      }
+
+      dynGroup->registerObject();
+      mGroups.push_back( dynGroup );
+      addObject( dynGroup );
    }
 
    if( mShowCustomFields && mTargets.size() == 1 )
@@ -889,15 +938,15 @@ DefineEngineMethod( GuiInspector, setObjectField, void, (const char* fieldname, 
 
 //-----------------------------------------------------------------------------
 
-DefineEngineMethod( GuiInspector, findByObject, S32, (SimObject* object), ,
+DefineEngineMethod( GuiInspector, findByObject, S32, (SimObject* obj), ,
 	"Returns the id of an awake inspector that is inspecting the passed object if one exists\n"
 	"@param object Object to find away inspector for."
 	"@return id of an awake inspector that is inspecting the passed object if one exists, else NULL or 0.")
 {
-   if ( !object )
+   if ( !obj)
       return NULL;
 
-   SimObject *inspector = GuiInspector::findByObject( object );
+   SimObject *inspector = GuiInspector::findByObject(obj);
 
    if ( !inspector )
       return NULL;

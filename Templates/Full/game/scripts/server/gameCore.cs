@@ -134,12 +134,12 @@ package GameCore
          // to caching mission lighting.
          $missionCRC = getFileCRC( %file );
 
-         // Exec the mission.  The MissionGroup (loaded components) is added to the ServerGroup
+         // Exec the mission.  The Scene (loaded components) is added to the ServerGroup
          exec(%file);
 
-         if( !isObject(MissionGroup) )
+         if( !isObject(getRootScene()) )
          {
-            $Server::LoadFailMsg = "No 'MissionGroup' found in mission \"" @ %file @ "\".";
+            $Server::LoadFailMsg = "No Scene found in mission \"" @ %file @ "\".";
          }
       }
 
@@ -573,6 +573,31 @@ function GameCore::onClientEnterGame(%game, %client)
       %client.isAiControlled(),
       %client.isAdmin,
       %client.isSuperAdmin);
+      
+   %entityIds = parseMissionGroupForIds("Entity", "");
+   %entityCount = getWordCount(%entityIds);
+   
+   for(%i=0; %i < %entityCount; %i++)
+   {
+      %entity = getWord(%entityIds, %i);
+      
+      for(%e=0; %e < %entity.getCount(); %e++)
+      {
+         %child = %entity.getObject(%e);
+         if(%child.getCLassName() $= "Entity")
+            %entityIds = %entityIds SPC %child.getID();  
+      }
+      
+      for(%c=0; %c < %entity.getComponentCount(); %c++)
+      {
+         %comp = %entity.getComponentByIndex(%c);
+         
+         if(%comp.isMethod("onClientConnect"))
+         {
+            %comp.onClientConnect(%client);  
+         }
+      }
+   }
 }
 
 function GameCore::onClientLeaveGame(%game, %client)

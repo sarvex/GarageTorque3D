@@ -115,6 +115,7 @@ Material::Material()
    for( U32 i=0; i<MAX_STAGES; i++ )
    {
       mDiffuse[i].set( 1.0f, 1.0f, 1.0f, 1.0f );
+      mDiffuseMapSRGB[i] = true;
       mSpecular[i].set( 1.0f, 1.0f, 1.0f, 1.0f );
 
       mSpecularPower[i] = 8.0f;
@@ -162,6 +163,9 @@ Material::Material()
 
       mSeqFramePerSec[i] = 0.0f;
       mSeqSegSize[i] = 0.0f;
+
+      // Deferred Shading
+      mMatInfoFlags[i] = 0.0f;
    }
 
    dMemset(mCellIndex, 0, sizeof(mCellIndex));
@@ -169,6 +173,9 @@ Material::Material()
    dMemset(mCellSize, 0, sizeof(mCellSize));
    dMemset(mNormalMapAtlas, 0, sizeof(mNormalMapAtlas));
    dMemset(mUseAnisotropic, 0, sizeof(mUseAnisotropic));
+
+   // Deferred Shading : Metalness
+   dMemset(mUseMetalness, 0, sizeof(mUseMetalness));
 
    mImposterLimits = Point4F::Zero;
 
@@ -182,6 +189,7 @@ Material::Material()
    mAlphaRef = 1;
 
    mCastShadows = true;
+   mCastDynamicShadows = false;
 
    mPlanarReflection = false;
 
@@ -218,6 +226,9 @@ void Material::initPersistFields()
 
       addField("diffuseMap", TypeImageFilename, Offset(mDiffuseMapFilename, Material), MAX_STAGES,
          "The diffuse color texture map." );
+
+      addField("diffuseMapSRGB", TypeBool, Offset(mDiffuseMapSRGB, Material), MAX_STAGES,
+         "Enable sRGB for the diffuse color texture map.");
 
       addField("overlayMap", TypeImageFilename, Offset(mOverlayMapFilename, Material), MAX_STAGES,
          "A secondary diffuse color texture map which will use the second texcoord of a mesh." );
@@ -288,10 +299,7 @@ void Material::initPersistFields()
       
       addField( "useAnisotropic", TypeBool, Offset(mUseAnisotropic, Material), MAX_STAGES,
          "Use anisotropic filtering for the textures of this stage." );
-
-      addField("envMap", TypeImageFilename, Offset(mEnvMapFilename, Material), MAX_STAGES,
-         "The name of an environment map cube map to apply to this material." );
-
+     
       addField("vertLit", TypeBool, Offset(mVertLit, Material), MAX_STAGES,
          "If true the vertex color is used for lighting." );
 
@@ -378,9 +386,6 @@ void Material::initPersistFields()
       addProtectedField("bumpTex",        TypeImageFilename,   Offset(mNormalMapFilename, Material),
          defaultProtectedSetNotEmptyFn, emptyStringProtectedGetFn, MAX_STAGES, 
          "For backwards compatibility.\n@see normalMap\n"); 
-      addProtectedField("envTex",         TypeImageFilename,   Offset(mEnvMapFilename, Material),
-         defaultProtectedSetNotEmptyFn, emptyStringProtectedGetFn, MAX_STAGES,
-         "For backwards compatibility.\n@see envMap\n"); 
       addProtectedField("colorMultiply",  TypeColorF,          Offset(mDiffuse, Material),
          defaultProtectedSetNotEmptyFn, emptyStringProtectedGetFn, MAX_STAGES,
          "For backwards compatibility.\n@see diffuseColor\n"); 
@@ -389,6 +394,9 @@ void Material::initPersistFields()
 
    addField( "castShadows", TypeBool, Offset(mCastShadows, Material),
       "If set to false the lighting system will not cast shadows from this material." );
+
+   addField( "castDynamicShadows", TypeBool, Offset(mCastDynamicShadows, Material),
+      "If set to false the lighting system will not cast dynamic shadows from this material." );
 
    addField("planarReflection", TypeBool, Offset(mPlanarReflection, Material), "@internal" );
 
@@ -621,78 +629,78 @@ void Material::StageData::getFeatureSet( FeatureSet *outFeatures ) const
    }
 }
 
-DefineConsoleMethod( Material, flush, void, (),, 
+DefineEngineMethod( Material, flush, void, (),, 
    "Flushes all material instances that use this material." )
 {
    object->flush();
 }
 
-DefineConsoleMethod( Material, reload, void, (),, 
+DefineEngineMethod( Material, reload, void, (),, 
    "Reloads all material instances that use this material." )
 {
    object->reload();
 }
 
-DefineConsoleMethod( Material, dumpInstances, void, (),, 
+DefineEngineMethod( Material, dumpInstances, void, (),, 
    "Dumps a formatted list of the currently allocated material instances for this material to the console." )
 {
    MATMGR->dumpMaterialInstances( object );
 }
 
-DefineConsoleMethod( Material, getAnimFlags, const char*, (U32 id), , "" )
+DefineEngineMethod( Material, getAnimFlags, const char*, (U32 id), , "" )
 {
    char * animFlags = Con::getReturnBuffer(512);
 
    if(object->mAnimFlags[ id ] & Material::Scroll)
    {
 	   if(dStrcmp( animFlags, "" ) == 0)
-	      dStrcpy( animFlags, "$Scroll" );
+	      dStrcpy( animFlags, "$Scroll", 512 );
    }
    if(object->mAnimFlags[ id ] & Material::Rotate)
    {
 	   if(dStrcmp( animFlags, "" ) == 0)
-	      dStrcpy( animFlags, "$Rotate" );
+	      dStrcpy( animFlags, "$Rotate", 512 );
 	   else
-			dStrcat( animFlags, " | $Rotate");
+			dStrcat( animFlags, " | $Rotate", 512);
    }
    if(object->mAnimFlags[ id ] & Material::Wave)
    {
 	   if(dStrcmp( animFlags, "" ) == 0)
-	      dStrcpy( animFlags, "$Wave" );
+	      dStrcpy( animFlags, "$Wave", 512 );
 	   else
-			dStrcat( animFlags, " | $Wave");
+			dStrcat( animFlags, " | $Wave", 512);
    }
    if(object->mAnimFlags[ id ] & Material::Scale)
    {
 	   if(dStrcmp( animFlags, "" ) == 0)
-	      dStrcpy( animFlags, "$Scale" );
+	      dStrcpy( animFlags, "$Scale", 512 );
 	   else
-			dStrcat( animFlags, " | $Scale");
+			dStrcat( animFlags, " | $Scale", 512);
    }
    if(object->mAnimFlags[ id ] & Material::Sequence)
    {
 	   if(dStrcmp( animFlags, "" ) == 0)
-	      dStrcpy( animFlags, "$Sequence" );
+	      dStrcpy( animFlags, "$Sequence", 512 );
 	   else
-			dStrcat( animFlags, " | $Sequence");
+			dStrcat( animFlags, " | $Sequence", 512);
    }
 
 	return animFlags;
 }
 
-DefineConsoleMethod(Material, getFilename, const char*, (),, "Get filename of material")
+DefineEngineMethod(Material, getFilename, const char*, (),, "Get filename of material")
 {
 	SimObject *material = static_cast<SimObject *>(object);
    return material->getFilename();
 }
 
-DefineConsoleMethod( Material, isAutoGenerated, bool, (),, 
+DefineEngineMethod( Material, isAutoGenerated, bool, (),, 
               "Returns true if this Material was automatically generated by MaterialList::mapMaterials()" )
 {
    return object->isAutoGenerated();
 }
 
-DefineConsoleMethod( Material, setAutoGenerated, void, (bool isAutoGenerated), , 
+DefineEngineMethod( Material, setAutoGenerated, void, (bool isAutoGenerated), , 
               "setAutoGenerated(bool isAutoGenerated): Set whether or not the Material is autogenerated." )
 {
    object->setAutoGenerated(isAutoGenerated);

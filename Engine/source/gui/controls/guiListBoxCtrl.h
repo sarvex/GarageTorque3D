@@ -70,7 +70,7 @@ public:
       String            itemTooltip;
       bool              isSelected;
       void*             itemData;
-      ColorF            color;
+      LinearColorF            color;
       bool              hasColor;
    };
 
@@ -102,12 +102,12 @@ public:
    void              setItemText( S32 index, StringTableEntry text );
 
    S32               addItem( StringTableEntry text, void *itemData = NULL );
-   S32               addItemWithColor( StringTableEntry text, ColorF color = ColorF(-1, -1, -1), void *itemData = NULL);
+   S32               addItemWithColor( StringTableEntry text, LinearColorF color = LinearColorF(-1, -1, -1), void *itemData = NULL);
    S32               insertItem( S32 index, StringTableEntry text, void *itemData = NULL );
-   S32               insertItemWithColor( S32 index, StringTableEntry text, ColorF color = ColorF(-1, -1, -1), void *itemData = NULL);
+   S32               insertItemWithColor( S32 index, StringTableEntry text, LinearColorF color = LinearColorF(-1, -1, -1), void *itemData = NULL);
    S32               findItemText( StringTableEntry text, bool caseSensitive = false );
 
-   void              setItemColor(S32 index, ColorF color);
+   void              setItemColor(S32 index, const LinearColorF& color);
    void              clearItemColor(S32 index);
 
    void              deleteItem( S32 index );
@@ -128,7 +128,7 @@ public:
 
    // Rendering
    virtual void      onRender( Point2I offset, const RectI &updateRect );
-   virtual void      onRenderItem( RectI itemRect, LBItem *item );
+   virtual void      onRenderItem(const RectI& itemRect, LBItem *item);
    void              drawBox( const Point2I &box, S32 size, ColorI &outlineColor, ColorI &boxColor );
    bool              renderTooltip( const Point2I &hoverPos, const Point2I& cursorPos, const char* tipText );
 	void					addFilteredItem( String item );

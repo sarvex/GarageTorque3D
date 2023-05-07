@@ -161,7 +161,7 @@ bool CloudLayer::onAdd()
       GFXStateBlockDesc desc;
       desc.setCullMode( GFXCullNone );
       desc.setBlend( true );
-      desc.setZReadWrite( false, false );
+      desc.setZReadWrite( true, false );
       desc.samplersDefined = true;
       desc.samplers[0].addressModeU = GFXAddressWrap;
       desc.samplers[0].addressModeV = GFXAddressWrap;
@@ -353,12 +353,12 @@ void CloudLayer::renderObject( ObjectRenderInst *ri, SceneRenderState *state, Ba
    mShaderConsts->setSafe( mEyePosWorldSC, camPos );
 
    LightInfo *lightinfo = LIGHTMGR->getSpecialLight(LightManager::slSunLightType);
-   const ColorF &sunlight = state->getAmbientLightColor();
+   const LinearColorF &sunlight = state->getAmbientLightColor();
 
    Point3F ambientColor( sunlight.red, sunlight.green, sunlight.blue );
    mShaderConsts->setSafe( mAmbientColorSC, ambientColor );   
 
-   const ColorF &sunColor = lightinfo->getColor();
+   const LinearColorF &sunColor = lightinfo->getColor();
    Point3F data( sunColor.red, sunColor.green, sunColor.blue );
    mShaderConsts->setSafe( mSunColorSC, data );
 
@@ -398,10 +398,10 @@ void CloudLayer::_initTexture()
    }
 
    if ( mTextureName.isNotEmpty() )
-      mTexture.set( mTextureName, &GFXDefaultStaticDiffuseProfile, "CloudLayer" );
+      mTexture.set( mTextureName, &GFXNormalMapProfile, "CloudLayer" );
 
    if ( mTexture.isNull() )
-      mTexture.set( GFXTextureManager::getWarningTexturePath(), &GFXDefaultStaticDiffuseProfile, "CloudLayer" );
+      mTexture.set( GFXTextureManager::getWarningTexturePath(), &GFXNormalMapProfile, "CloudLayer" );
 }
 
 void CloudLayer::_initBuffers()

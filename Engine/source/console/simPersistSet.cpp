@@ -29,13 +29,13 @@
 IMPLEMENT_CONOBJECT( SimPersistSet );
 
 ConsoleDocClass( SimPersistSet,
-				"@brief A SimSet that can be safely persisted.\n\n"
-				"Uses SimPersistIDs to reference objects in the set "
-				"while persisted on disk.  This allows the set to resolve "
-				"its references no matter whether they are loaded before or "
-				"after the set is created.\n\n"
-				"Not intended for game development, for editors or internal use only.\n\n "
-				"@internal");
+            "@brief A SimSet that can be safely persisted.\n\n"
+            "Uses SimPersistIDs to reference objects in the set "
+            "while persisted on disk.  This allows the set to resolve "
+            "its references no matter whether they are loaded before or "
+            "after the set is created.\n\n"
+            "Not intended for game development, for editors or internal use only.\n\n "
+            "@internal");
 
 //-----------------------------------------------------------------------------
 
@@ -187,7 +187,7 @@ void SimPersistSet::addObject( SimObject* object )
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleMethod( SimPersistSet, resolvePersistentIds, void, (), , "() - Try to bind unresolved persistent IDs in the set." )
+DefineEngineMethod( SimPersistSet, resolvePersistentIds, void, (), , "() - Try to bind unresolved persistent IDs in the set." )
 {
    object->resolvePIDs();
 }

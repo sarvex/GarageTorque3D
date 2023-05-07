@@ -85,6 +85,14 @@ void ProcessedCustomMaterial::_setStageData()
          continue;
       }
 
+      if(filename.equal(String("$dynamicShadowMap"), String::NoCase))
+      {
+         rpd->mTexType[i] = Material::DynamicShadowMap;
+         rpd->mSamplerNames[i] = mCustomMaterial->mSamplerNames[i];
+         mMaxTex = i+1;
+         continue;
+      }
+
       if(filename.equal(String("$dynamiclightmask"), String::NoCase))
       {
          rpd->mTexType[i] = Material::DynamicLightMask;
@@ -165,7 +173,7 @@ void ProcessedCustomMaterial::_setStageData()
          continue;
       }
 
-      rpd->mTexSlot[i].texObject = _createTexture( filename, &GFXDefaultStaticDiffuseProfile );
+      rpd->mTexSlot[i].texObject = _createTexture( filename, &GFXStaticTextureSRGBProfile );
       if ( !rpd->mTexSlot[i].texObject )
       {
          mMaterial->logError("Failed to load texture %s", _getTexturePath(filename).c_str());

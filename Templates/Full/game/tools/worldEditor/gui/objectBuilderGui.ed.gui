@@ -947,10 +947,10 @@ function ObjectBuilderGui::buildPlayerDropPoint(%this)
    %this.addField("spawnClass",     "TypeString",    "Spawn Class", "Player");
    %this.addField("spawnDatablock", "TypeDataBlock", "Spawn Data", "PlayerData DefaultPlayerData");
 
-   if( EWCreatorWindow.objectGroup.getID() == MissionGroup.getID() )
+   if( EWCreatorWindow.objectGroup.getID() == getRootScene().getID() )
    {
       if( !isObject("PlayerDropPoints") )
-         MissionGroup.add( new SimGroup("PlayerDropPoints") );
+         getRootScene().add( new SimGroup("PlayerDropPoints") );
       %this.objectGroup = "PlayerDropPoints";
    }
 
@@ -967,10 +967,10 @@ function ObjectBuilderGui::buildObserverDropPoint(%this)
    %this.addField("spawnClass",     "TypeString",    "Spawn Class", "Camera");
    %this.addField("spawnDatablock", "TypeDataBlock", "Spawn Data", "CameraData Observer");
 
-   if( EWCreatorWindow.objectGroup.getID() == MissionGroup.getID() )
+   if( EWCreatorWindow.objectGroup.getID() == getRootScene().getID() )
    {
       if( !isObject("ObserverDropPoints") )
-         MissionGroup.add( new SimGroup("ObserverDropPoints") );
+         getRootScene().add( new SimGroup("ObserverDropPoints") );
       %this.objectGroup = "ObserverDropPoints";
    }
 
@@ -980,7 +980,19 @@ function ObjectBuilderGui::buildObserverDropPoint(%this)
 //------------------------------------------------------------------------------
 // System
 //------------------------------------------------------------------------------
-
+function ObjectBuilderGui::buildVolumetricFog(%this)
+{
+	// Change this if you want to default to another Folder
+	// Otherwise every time you want to add a Fog you will go this.
+	%defShape = "/art/environment/Fog_Cube.dts";
+	%this.lastPath=getMainDotCsDir() @ %defShape;
+	OBObjectName.setValue( "" );
+	%this.objectClassName = "VolumetricFog";
+	%this.addField( "shapeName", "TypeFile", "Shape (Fog volume)", "", "*.dts;*.dae");
+	%this.addField("Scale", "TypePoint3", "Scale", "1 1 1");
+	%this.addField("FogColor", "TypeColorI", "FogColor", "200 200 200 255");
+	%this.process();
+}
 function ObjectBuilderGui::buildPhysicsEntity(%this)
 {
    %this.objectClassName = "PhysicsEntity";
@@ -1127,6 +1139,17 @@ function ProximityMineData::create( %datablock )
       dataBlock = %dataBlock;
       parentGroup = EWCreatorWindow.objectGroup;
       static = true;    // mines created by the editor are static, and armed immediately
+   };
+
+   return %obj;
+}
+
+function RibbonData::create( %datablock )
+{
+   %obj = new RibbonNode()
+   {
+      dataBlock = DefaultRibbonNodeData;
+      ribbon = %datablock;
    };
 
    return %obj;

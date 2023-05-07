@@ -20,6 +20,11 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
+//~~~~~~~~~~~~~~~~~~~~//~~~~~~~~~~~~~~~~~~~~//~~~~~~~~~~~~~~~~~~~~//~~~~~~~~~~~~~~~~~~~~~//
+// Arcane-FX for MIT Licensed Open Source version of Torque 3D from GarageGames
+// Copyright (C) 2015 Faust Logic, Inc.
+//~~~~~~~~~~~~~~~~~~~~//~~~~~~~~~~~~~~~~~~~~//~~~~~~~~~~~~~~~~~~~~//~~~~~~~~~~~~~~~~~~~~~//
+
 #ifndef _TSSTATIC_H_
 #define _TSSTATIC_H_
 
@@ -37,6 +42,10 @@
 #endif
 #ifndef _TSSHAPE_H_
 #include "ts/tsShape.h"
+#endif
+
+#ifndef _REFLECTOR_H_
+   #include "scene/reflector.h"
 #endif
 
 class TSShapeInstance;
@@ -129,6 +138,7 @@ protected:
    bool castRay(const Point3F &start, const Point3F &end, RayInfo* info);
    bool castRayRendered(const Point3F &start, const Point3F &end, RayInfo* info);
    bool buildPolyList(PolyListContext context, AbstractPolyList* polyList, const Box3F &box, const SphereF& sphere);
+   bool buildExportPolyList(ColladaUtils::ExportData* exportData, const Box3F &box, const SphereF &);
    void buildConvex(const Box3F& box, Convex* convex);
    
    bool _createShape();
@@ -146,6 +156,11 @@ protected:
 
    /// Start or stop processing ticks depending on our state.
    void _updateShouldTick();
+
+   String cubeDescName;
+   U32 cubeDescId;
+   ReflectorDesc *reflectorDesc;
+   CubeReflector mCubeReflector;
 
 protected:
 
@@ -209,6 +224,8 @@ public:
    void onScaleChanged();
    void prepRenderImage( SceneRenderState *state );
    void inspectPostApply();
+   virtual void onMount( SceneObject *obj, S32 node );
+   virtual void onUnmount( SceneObject *obj, S32 node );
 
    /// The type of mesh data use for collision queries.
    MeshType getCollisionType() const { return mCollisionType; }
@@ -217,13 +234,30 @@ public:
 
    Resource<TSShape> getShape() const { return mShape; }
 	StringTableEntry getShapeFileName() { return mShapeName; }
+   void setShapeFileName(StringTableEntry shapeName) { mShapeName = shapeName; }
   
    TSShapeInstance* getShapeInstance() const { return mShapeInstance; }
+
+   U32 getNumDetails();
 
    const Vector<S32>& getCollisionDetails() const { return mCollisionDetails; }
 
    const Vector<S32>& getLOSDetails() const { return mLOSDetails; }
 
+private:
+   virtual void   onStaticModified(const char* slotName, const char*newValue = NULL);
+protected:
+   Vector<S32>    mDecalDetails;
+   Vector<S32>*   mDecalDetailsPtr;
+public:
+   bool           mIgnoreZodiacs;
+   bool           mHasGradients;
+   bool           mInvertGradientRange;
+   Point2F        mGradientRangeUser;
+   Point2F        mGradientRange;
+private:
+   void           set_special_typing();
+   virtual void setSelectionFlags(U8 flags);
 };
 
 typedef TSStatic::MeshType TSMeshType;

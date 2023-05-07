@@ -29,6 +29,7 @@ const String ShaderGenVars::worldToCamera("$worldToCamera");
 const String ShaderGenVars::worldToObj("$worldToObj");
 const String ShaderGenVars::viewToObj("$viewToObj");
 const String ShaderGenVars::cubeTrans("$cubeTrans");
+const String ShaderGenVars::cubeMips("$cubeMips");
 const String ShaderGenVars::objTrans("$objTrans");
 const String ShaderGenVars::cubeEyePos("$cubeEyePos");
 const String ShaderGenVars::eyePos("$eyePos");
@@ -81,3 +82,6 @@ const String ShaderGenVars::dLightMap("$dlightMap");
 const String ShaderGenVars::dLightMapSec("$dlightMapSec");
 const String ShaderGenVars::dLightMask("$dlightMask");
 const String ShaderGenVars::toneMap("$toneMap");
+
+// Deferred shading
+const String ShaderGenVars::matInfoFlags("$matInfoFlags");

@@ -95,31 +95,62 @@ EventManager *NavMesh::getEventManager()
    return smEventManager;
 }
 
-DefineConsoleFunction(getNavMeshEventManager, S32, (),,
+DefineEngineFunction(getNavMeshEventManager, S32, (),,
    "@brief Get the EventManager object for all NavMesh updates.")
 {
    return NavMesh::getEventManager()->getId();
 }
 
-DefineConsoleFunction(NavMeshUpdateAll, void, (S32 objid, bool remove), (0, false),
+DefineEngineFunction(NavMeshUpdateAll, void, (S32 objid, bool remove), (0, false),
    "@brief Update all NavMesh tiles that intersect the given object's world box.")
 {
    SceneObject *obj;
    if(!Sim::findObject(objid, obj))
       return;
-   if(remove)
-      obj->disableCollision();
+   obj->mPathfindingIgnore = remove;
    SimSet *set = NavMesh::getServerSet();
    for(U32 i = 0; i < set->size(); i++)
    {
-      NavMesh *m = static_cast<NavMesh*>(set->at(i));
-      m->buildTiles(obj->getWorldBox());
+      NavMesh *m = dynamic_cast<NavMesh*>(set->at(i));
+      if (m)
+      {
+         m->cancelBuild();
+         m->buildTiles(obj->getWorldBox());
+      }
    }
-   if(remove)
-      obj->enableCollision();
 }
 
-DefineConsoleFunction(NavMeshUpdateOne, void, (S32 meshid, S32 objid, bool remove), (0, 0, false),
+DefineEngineFunction(NavMeshUpdateAroundObject, void, (S32 objid, bool remove), (0, false),
+   "@brief Update all NavMesh tiles that intersect the given object's world box.")
+{
+   SceneObject *obj;
+   if (!Sim::findObject(objid, obj))
+      return;
+   obj->mPathfindingIgnore = remove;
+   SimSet *set = NavMesh::getServerSet();
+   for (U32 i = 0; i < set->size(); i++)
+   {
+      NavMesh *m = dynamic_cast<NavMesh*>(set->at(i));
+      if (m)
+      {
+         m->cancelBuild();
+         m->buildTiles(obj->getWorldBox());
+      }
+   }
+}
+
+
+DefineEngineFunction(NavMeshIgnore, void, (S32 objid, bool _ignore), (0, true),
+   "@brief Flag this object as not generating a navmesh result.")
+{
+   SceneObject *obj;
+   if(!Sim::findObject(objid, obj))
+      return;
+
+      obj->mPathfindingIgnore = _ignore;
+}
+
+DefineEngineFunction(NavMeshUpdateOne, void, (S32 meshid, S32 objid, bool remove), (0, 0, false),
    "@brief Update all tiles in a given NavMesh that intersect the given object's world box.")
 {
    NavMesh *mesh;
@@ -144,10 +175,10 @@ DefineConsoleFunction(NavMeshUpdateOne, void, (S32 meshid, S32 objid, bool remov
 NavMesh::NavMesh()
 {
    mTypeMask |= StaticShapeObjectType | MarkerObjectType;
-   mFileName = StringTable->insert("");
+   mFileName = StringTable->EmptyString();
    mNetFlags.clear(Ghostable);
 
-   mSaveIntermediates = true;
+   mSaveIntermediates = false;
    nm = NULL;
    ctx = NULL;
 
@@ -174,7 +205,7 @@ NavMesh::NavMesh()
    mLargeCharacters = false;
    mVehicles = false;
 
-   mCoverSet = StringTable->insert("");
+   mCoverSet = StringTable->EmptyString();
    mInnerCover = false;
    mCoverDist = 1.0f;
    mPeekDist = 0.7f;
@@ -637,7 +668,7 @@ DefineEngineMethod(NavMesh, build, bool, (bool background, bool save), (true, fa
 
 void NavMesh::cancelBuild()
 {
-   while(!mDirtyTiles.empty()) mDirtyTiles.pop();
+   mDirtyTiles.clear();
    ctx->stopTimer(RC_TIMER_TOTAL);
    mBuilding = false;
 }
@@ -681,7 +712,7 @@ void NavMesh::updateConfig()
    cfg.tileSize = mTileSize / cfg.cs;
 }
 
-S32 NavMesh::getTile(Point3F pos)
+S32 NavMesh::getTile(const Point3F& pos)
 {
    if(mBuilding)
       return -1;
@@ -702,12 +733,13 @@ Box3F NavMesh::getTileBox(U32 id)
 
 void NavMesh::updateTiles(bool dirty)
 {
+   PROFILE_SCOPE(NavMesh_updateTiles);
    if(!isProperlyAdded())
       return;
 
    mTiles.clear();
    mTileData.clear();
-   while(!mDirtyTiles.empty()) mDirtyTiles.pop();
+   mDirtyTiles.clear();
 
    const Box3F &box = DTStoRC(getWorldBox());
    if(box.isEmpty())
@@ -741,7 +773,7 @@ void NavMesh::updateTiles(bool dirty)
                   tileBmin, tileBmax));
 
          if(dirty)
-            mDirtyTiles.push(mTiles.size() - 1);
+            mDirtyTiles.push_back_unique(mTiles.size() - 1);
 
          if(mSaveIntermediates)
             mTileData.increment();
@@ -756,22 +788,25 @@ void NavMesh::processTick(const Move *move)
 
 void NavMesh::buildNextTile()
 {
+   PROFILE_SCOPE(NavMesh_buildNextTile);
    if(!mDirtyTiles.empty())
    {
       // Pop a single dirty tile and process it.
       U32 i = mDirtyTiles.front();
-      mDirtyTiles.pop();
+      mDirtyTiles.pop_front();
       const Tile &tile = mTiles[i];
       // Intermediate data for tile build.
       TileData tempdata;
       TileData &tdata = mSaveIntermediates ? mTileData[i] : tempdata;
+      
+      // Remove any previous data.
+      nm->removeTile(nm->getTileRefAt(tile.x, tile.y, 0), 0, 0);
+
       // Generate navmesh for this tile.
       U32 dataSize = 0;
       unsigned char* data = buildTileData(tile, tdata, dataSize);
       if(data)
       {
-         // Remove any previous data.
-         nm->removeTile(nm->getTileRefAt(tile.x, tile.y, 0), 0, 0);
          // Add new data (navmesh owns and deletes the data).
          dtStatus status = nm->addTile(data, dataSize, DT_TILE_FREE_DATA, 0, 0);
          int success = 1;
@@ -799,7 +834,7 @@ void NavMesh::buildNextTile()
          ctx->stopTimer(RC_TIMER_TOTAL);
          if(getEventManager())
          {
-            String str = String::ToString("%d %.3f", getId(), ctx->getAccumulatedTime(RC_TIMER_TOTAL) / 1000.0f);
+            String str = String::ToString("%d", getId());
             getEventManager()->postEvent("NavMeshUpdate", str.c_str());
             setMaskBits(LoadFlag);
          }
@@ -811,6 +846,7 @@ void NavMesh::buildNextTile()
 static void buildCallback(SceneObject* object,void *key)
 {
    SceneContainer::CallbackInfo* info = reinterpret_cast<SceneContainer::CallbackInfo*>(key);
+   if (!object->mPathfindingIgnore)
    object->buildPolyList(info->context,info->polyList,info->boundingBox,info->boundingSphere);
 }
 
@@ -830,9 +866,10 @@ unsigned char *NavMesh::buildTileData(const Tile &tile, TileData &data, U32 &dat
    SceneContainer::CallbackInfo info;
    info.context = PLC_Navigation;
    info.boundingBox = box;
+   data.geom.clear();
    info.polyList = &data.geom;
    info.key = this;
-   getContainer()->findObjects(box, StaticShapeObjectType | TerrainObjectType, buildCallback, &info);
+   getContainer()->findObjects(box, StaticObjectType | DynamicShapeObjectType, buildCallback, &info);
 
    // Parse water objects into the same list, but remember how much geometry was /not/ water.
    U32 nonWaterVertCount = data.geom.getVertCount();
@@ -843,8 +880,11 @@ unsigned char *NavMesh::buildTileData(const Tile &tile, TileData &data, U32 &dat
    }
 
    // Check for no geometry.
-   if(!data.geom.getVertCount())
-      return false;
+   if (!data.geom.getVertCount())
+   {
+      data.geom.clear();
+      return NULL;
+   }
 
    // Figure out voxel dimensions of this tile.
    U32 width = 0, height = 0;
@@ -865,11 +905,7 @@ unsigned char *NavMesh::buildTileData(const Tile &tile, TileData &data, U32 &dat
    }
 
    unsigned char *areas = new unsigned char[data.geom.getTriCount()];
-   if(!areas)
-   {
-      Con::errorf("Out of memory (area flags) for NavMesh %s", getIdString());
-      return NULL;
-   }
+
    dMemset(areas, 0, data.geom.getTriCount() * sizeof(unsigned char));
 
    // Mark walkable triangles with the appropriate area flags, and rasterize.
@@ -1059,6 +1095,7 @@ unsigned char *NavMesh::buildTileData(const Tile &tile, TileData &data, U32 &dat
 /// this NavMesh object.
 void NavMesh::buildTiles(const Box3F &box)
 {
+   PROFILE_SCOPE(NavMesh_buildTiles);
    // Make sure we've already built or loaded.
    if(!nm)
       return;
@@ -1070,7 +1107,7 @@ void NavMesh::buildTiles(const Box3F &box)
       if(!tile.box.isOverlapped(box))
          continue;
       // Mark as dirty.
-      mDirtyTiles.push(i);
+      mDirtyTiles.push_back_unique(i);
    }
    if(mDirtyTiles.size())
       ctx->startTimer(RC_TIMER_TOTAL);
@@ -1084,9 +1121,10 @@ DefineEngineMethod(NavMesh, buildTiles, void, (Box3F box),,
 
 void NavMesh::buildTile(const U32 &tile)
 {
+   PROFILE_SCOPE(NavMesh_buildTile);
    if(tile < mTiles.size())
    {
-      mDirtyTiles.push(tile);
+      mDirtyTiles.push_back_unique(tile);
       ctx->startTimer(RC_TIMER_TOTAL);
    }
 }
@@ -1103,12 +1141,13 @@ void NavMesh::buildLinks()
       // Iterate over links
       for(U32 j = 0; j < mLinkIDs.size(); j++)
       {
+         if (mLinksUnsynced[j])
+         {
          if(tile.box.isContained(getLinkStart(j)) ||
-            tile.box.isContained(getLinkEnd(j)) &&
-            mLinksUnsynced[j])
+               tile.box.isContained(getLinkEnd(j)))
          {
             // Mark tile for build.
-            mDirtyTiles.push(i);
+            mDirtyTiles.push_back_unique(i);
             // Delete link if necessary
             if(mDeleteLinks[j])
             {
@@ -1119,6 +1158,7 @@ void NavMesh::buildLinks()
                mLinksUnsynced[j] = false;
          }
       }
+   }
    }
    if(mDirtyTiles.size())
       ctx->startTimer(RC_TIMER_TOTAL);
@@ -1186,10 +1226,10 @@ bool NavMesh::createCoverPoints()
          float segs[MAX_SEGS*6];
          int nsegs = 0;
          query->getPolyWallSegments(ref, &f, segs, NULL, &nsegs, MAX_SEGS);
-         for(int j = 0; j < nsegs; ++j)
+         for(int segIDx = 0; segIDx < nsegs; ++segIDx)
          {
-            const float* sa = &segs[j*6];
-            const float* sb = &segs[j*6+3];
+            const float* sa = &segs[segIDx *6];
+            const float* sb = &segs[segIDx *6+3];
             Point3F a = RCtoDTS(sa), b = RCtoDTS(sb);
             F32 len = (b - a).len();
             if(len < mWalkableRadius * 2)
@@ -1198,7 +1238,7 @@ bool NavMesh::createCoverPoints()
             edge.normalize();
             // Number of points to try placing - for now, one at each end.
             U32 pointCount = (len > mWalkableRadius * 4) ? 2 : 1;
-            for(U32 i = 0; i < pointCount; i++)
+            for(U32 pointIDx = 0; pointIDx < pointCount; pointIDx++)
             {
                MatrixF mat;
                Point3F pos;
@@ -1208,10 +1248,10 @@ bool NavMesh::createCoverPoints()
                // Otherwise, stand off from edge ends.
                else
                {
-                  if(i % 2)
-                     pos = a + edge * (i/2+1) * mWalkableRadius;
+                  if(pointIDx % 2)
+                     pos = a + edge * (pointIDx /2+1) * mWalkableRadius;
                   else
-                     pos = b - edge * (i/2+1) * mWalkableRadius;
+                     pos = b - edge * (pointIDx /2+1) * mWalkableRadius;
                }
                CoverPointData data;
                if(testEdgeCover(pos, edge, data))
@@ -1286,7 +1326,7 @@ bool NavMesh::testEdgeCover(const Point3F &pos, const VectorF &dir, CoverPointDa
 
 void NavMesh::renderToDrawer()
 {
-   dd.clear();
+	mDbgDraw.clear();
    // Recast debug draw
    NetObject *no = getServerObject();
    if(no)
@@ -1295,12 +1335,12 @@ void NavMesh::renderToDrawer()
 
       if(n->nm)
       {
-         dd.beginGroup(0);
-         duDebugDrawNavMesh       (&dd, *n->nm, 0);
-         dd.beginGroup(1);
-         duDebugDrawNavMeshPortals(&dd, *n->nm);
-         dd.beginGroup(2);
-         duDebugDrawNavMeshBVTree (&dd, *n->nm);
+         mDbgDraw.beginGroup(0);
+         duDebugDrawNavMesh       (&mDbgDraw, *n->nm, 0);
+		 mDbgDraw.beginGroup(1);
+         duDebugDrawNavMeshPortals(&mDbgDraw, *n->nm);
+		 mDbgDraw.beginGroup(2);
+         duDebugDrawNavMeshBVTree (&mDbgDraw, *n->nm);
       }
    }
 }
@@ -1352,16 +1392,16 @@ void NavMesh::render(ObjectRenderInst *ri, SceneRenderState *state, BaseMatInsta
          int alpha = 80;
          if(!n->isSelected() || !Con::getBoolVariable("$Nav::EditorOpen"))
             alpha = 20;
-         dd.overrideColor(duRGBA(255, 0, 0, alpha));
+		 mDbgDraw.overrideColor(duRGBA(255, 0, 0, alpha));
       }
       else
       {
-         dd.cancelOverride();
+		  mDbgDraw.cancelOverride();
       }
       
-      if((!gEditingMission && n->mAlwaysRender) || (gEditingMission && Con::getBoolVariable("$Nav::Editor::renderMesh", 1))) dd.renderGroup(0);
-      if(Con::getBoolVariable("$Nav::Editor::renderPortals")) dd.renderGroup(1);
-      if(Con::getBoolVariable("$Nav::Editor::renderBVTree"))  dd.renderGroup(2);
+      if((!gEditingMission && n->mAlwaysRender) || (gEditingMission && Con::getBoolVariable("$Nav::Editor::renderMesh", 1))) mDbgDraw.renderGroup(0);
+      if(Con::getBoolVariable("$Nav::Editor::renderPortals")) mDbgDraw.renderGroup(1);
+      if(Con::getBoolVariable("$Nav::Editor::renderBVTree"))  mDbgDraw.renderGroup(2);
    }
 }
 
@@ -1553,12 +1593,15 @@ bool NavMesh::load()
    S32 s;
    file.read(sizeof(S32), (char*)&s);
    setLinkCount(s);
-   file.read(sizeof(F32) * s * 6, (char*)const_cast<F32*>(mLinkVerts.address()));
-   file.read(sizeof(F32) * s,     (char*)const_cast<F32*>(mLinkRads.address()));
-   file.read(sizeof(U8) * s,      (char*)const_cast<U8*>(mLinkDirs.address()));
-   file.read(sizeof(U8) * s,      (char*)const_cast<U8*>(mLinkAreas.address()));
-   file.read(sizeof(U16) * s,     (char*)const_cast<U16*>(mLinkFlags.address()));
-   file.read(sizeof(F32) * s,     (char*)const_cast<U32*>(mLinkIDs.address()));
+   if (s > 0)
+   {
+      file.read(sizeof(F32) * s * 6, (char*)const_cast<F32*>(mLinkVerts.address()));
+      file.read(sizeof(F32) * s, (char*)const_cast<F32*>(mLinkRads.address()));
+      file.read(sizeof(U8) * s, (char*)const_cast<U8*>(mLinkDirs.address()));
+      file.read(sizeof(U8) * s, (char*)const_cast<U8*>(mLinkAreas.address()));
+      file.read(sizeof(U16) * s, (char*)const_cast<U16*>(mLinkFlags.address()));
+      file.read(sizeof(F32) * s, (char*)const_cast<U32*>(mLinkIDs.address()));
+   }
    mLinksUnsynced.fill(false);
    mLinkSelectStates.fill(Unselected);
    mDeleteLinks.fill(false);
@@ -1627,12 +1670,15 @@ bool NavMesh::save()
 
    S32 s = mLinkIDs.size();
    file.write(sizeof(S32), (const char*)&s);
-   file.write(sizeof(F32) * s * 6, (const char*)mLinkVerts.address());
-   file.write(sizeof(F32) * s,     (const char*)mLinkRads.address());
-   file.write(sizeof(U8) * s,      (const char*)mLinkDirs.address());
-   file.write(sizeof(U8) * s,      (const char*)mLinkAreas.address());
-   file.write(sizeof(U16) * s,     (const char*)mLinkFlags.address());
-   file.write(sizeof(U32) * s,     (const char*)mLinkIDs.address());
+   if (s > 0)
+   {
+      file.write(sizeof(F32) * s * 6, (const char*)mLinkVerts.address());
+      file.write(sizeof(F32) * s,     (const char*)mLinkRads.address());
+      file.write(sizeof(U8) * s,      (const char*)mLinkDirs.address());
+      file.write(sizeof(U8) * s,      (const char*)mLinkAreas.address());
+      file.write(sizeof(U16) * s,     (const char*)mLinkFlags.address());
+      file.write(sizeof(U32) * s,     (const char*)mLinkIDs.address());
+   }
 
    file.close();
 

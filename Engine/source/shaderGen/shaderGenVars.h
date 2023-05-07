@@ -38,6 +38,7 @@ struct ShaderGenVars
    const static String worldToObj;
    const static String viewToObj;
    const static String cubeTrans;
+   const static String cubeMips;
    const static String objTrans;
    const static String cubeEyePos;
    const static String eyePos;
@@ -94,6 +95,9 @@ struct ShaderGenVars
    const static String dLightMapSec;
    const static String dLightMask;
    const static String toneMap;
+
+   // Deferred Shading
+   const static String matInfoFlags;
 };
 
 #endif

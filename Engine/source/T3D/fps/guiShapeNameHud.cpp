@@ -47,11 +47,11 @@ class GuiShapeNameHud : public GuiControl {
    typedef GuiControl Parent;
 
    // field data
-   ColorF   mFillColor;
-   ColorF   mFrameColor;
-   ColorF   mTextColor;
-   ColorF   mLabelFillColor;
-   ColorF   mLabelFrameColor;
+   LinearColorF   mFillColor;
+   LinearColorF   mFrameColor;
+   LinearColorF   mTextColor;
+   LinearColorF   mLabelFillColor;
+   LinearColorF   mLabelFrameColor;
 
    F32      mVerticalOffset;
    F32      mDistanceFade;
@@ -110,9 +110,6 @@ ConsoleDocClass( GuiShapeNameHud,
    "@ingroup GuiGame\n"
 );
 
-/// Default distance for object's information to be displayed.
-static const F32 cDefaultVisibleDistance = 500.0f;
-
 GuiShapeNameHud::GuiShapeNameHud()
 {
    mFillColor.set( 0.25f, 0.25f, 0.25f, 0.25f );
@@ -165,7 +162,7 @@ void GuiShapeNameHud::onRender( Point2I, const RectI &updateRect)
 {
    // Background fill first
    if (mShowFill)
-      GFX->getDrawUtil()->drawRectFill(updateRect, mFillColor);
+      GFX->getDrawUtil()->drawRectFill(updateRect, mFillColor.toColorI());
 
    // Must be in a TS Control
    GuiTSCtrl *parent = dynamic_cast<GuiTSCtrl*>(getParent());
@@ -196,7 +193,7 @@ void GuiShapeNameHud::onRender( Point2I, const RectI &updateRect)
 
    // Collision info. We're going to be running LOS tests and we
    // don't want to collide with the control object.
-   static U32 losMask = TerrainObjectType | ShapeBaseObjectType;
+   static U32 losMask = TerrainObjectType | ShapeBaseObjectType | StaticObjectType;
    control->disableCollision();
 
    // All ghosted objects are added to the server connection group,
@@ -277,7 +274,7 @@ void GuiShapeNameHud::onRender( Point2I, const RectI &updateRect)
 
    // Border last
    if (mShowFrame)
-      GFX->getDrawUtil()->drawRect(updateRect, mFrameColor);
+      GFX->getDrawUtil()->drawRect(updateRect, mFrameColor.toColorI());
 }
 
 
@@ -301,18 +298,20 @@ void GuiShapeNameHud::drawName(Point2I offset, const char *name, F32 opacity)
    offset.x -= width / 2;
    offset.y -= height / 2;
 
+   GFXDrawUtil* drawUtil = GFX->getDrawUtil();
+
    // Background fill first
    if (mShowLabelFill)
-      GFX->getDrawUtil()->drawRectFill(RectI(offset, extent), mLabelFillColor);
+      drawUtil->drawRectFill(RectI(offset, extent), mLabelFillColor.toColorI());
 
    // Deal with opacity and draw.
    mTextColor.alpha = opacity;
-   GFX->getDrawUtil()->setBitmapModulation(mTextColor);
-   GFX->getDrawUtil()->drawText(mProfile->mFont, offset + mLabelPadding, name);
-   GFX->getDrawUtil()->clearBitmapModulation();
+   drawUtil->setBitmapModulation(mTextColor.toColorI());
+   drawUtil->drawText(mProfile->mFont, offset + mLabelPadding, name);
+   drawUtil->clearBitmapModulation();
 
    // Border last
    if (mShowLabelFrame)
-      GFX->getDrawUtil()->drawRect(RectI(offset, extent), mLabelFrameColor);
+      drawUtil->drawRect(RectI(offset, extent), mLabelFrameColor.toColorI());
 }
 

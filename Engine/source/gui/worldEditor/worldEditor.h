@@ -58,7 +58,7 @@
 
 class SceneObject;
 class WorldEditorSelection;
-
+class EditorTool;
 
 ///
 class WorldEditor : public EditTSCtrl
@@ -117,6 +117,8 @@ class WorldEditor : public EditTSCtrl
       void makeSelectionPrefab( const char *filename );
       void explodeSelectedPrefab();
 
+      void makeSelectionAMesh(const char *filename);
+
       //
       static SceneObject* getClientObj(SceneObject *);
       static void markAsSelected( SimObject* object, bool state );
@@ -162,7 +164,8 @@ class WorldEditor : public EditTSCtrl
       bool copySelection(Selection*  sel);
       bool pasteSelection(bool dropSel=true);
       void dropSelection(Selection*  sel);
-      void dropBelowSelection(Selection*  sel, const Point3F & centroid, bool useBottomBounds=false);
+      void dropBelowSelection(Selection*  sel, const Point3F & centroid, bool useBottomBounds = false);
+      void dropAtGizmo(Selection*  sel, const Point3F & gizmoPos);
 
       void terrainSnapSelection(Selection* sel, U8 modifier, Point3F gizmoPos, bool forceStick=false);
       void softSnapSelection(Selection* sel, U8 modifier, Point3F gizmoPos);
@@ -282,6 +285,9 @@ class WorldEditor : public EditTSCtrl
       ClassInfo::Entry * getClassEntry(const SimObject * obj);
       bool addClassEntry(ClassInfo::Entry * entry);
 
+
+      EditorTool* mActiveEditorTool;
+
    // persist field data
    public:
 
@@ -294,7 +300,8 @@ class WorldEditor : public EditTSCtrl
          DropAtScreenCenter,
          DropAtCentroid,
          DropToTerrain,
-         DropBelowSelection
+         DropBelowSelection,
+         DropAtGizmo
       };
 
       // Snapping alignment mode
@@ -347,9 +354,12 @@ class WorldEditor : public EditTSCtrl
       F32               mDropAtScreenCenterMax;
 
       bool              mGridSnap;
+      bool              mUseGroupCenter;
       bool              mStickToGround;
       bool              mStuckToGround;            ///< Selection is stuck to the ground
       AlignmentType     mTerrainSnapAlignment;     ///< How does the stickied object align to the terrain
+      bool              mTerrainSnapOffsetZ;       ///< Allows the use of an offset to avoid z-fighting with flat objects on a flat terrain.
+      F32               mOffsetZValue;             ///< Value of the Z offset (note: this shouldnt be changed once set)
 
       bool              mSoftSnap;                 ///< Allow soft snapping all of the time
       bool              mSoftSnapActivated;        ///< Soft snap has been activated by the user and allowed by the current rules
@@ -406,6 +416,9 @@ class WorldEditor : public EditTSCtrl
       DECLARE_CONOBJECT(WorldEditor);
 
 	  static Signal<void(WorldEditor*)> smRenderSceneSignal;
+
+      void setEditorTool(EditorTool*);
+      EditorTool* getActiveEditorTool() { return mActiveEditorTool; }
 };
 
 typedef WorldEditor::DropType WorldEditorDropType;

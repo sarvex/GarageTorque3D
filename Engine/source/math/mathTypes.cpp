@@ -36,7 +36,8 @@
 #include "math/mRandom.h"
 #include "math/mEase.h"
 #include "math/mathUtils.h"
-
+#include "math/mRotation.h"
+#include "core/strings/stringUnit.h"
 
 IMPLEMENT_SCOPE( MathTypes, Math,, "" );
 
@@ -112,12 +113,19 @@ IMPLEMENT_STRUCT( EaseF,
    EaseF, MathTypes,
    "" )
 END_IMPLEMENT_STRUCT;
-
+IMPLEMENT_STRUCT(RotationF,
+   RotationF, MathTypes,
+   "")
+   FIELD(x, x, 1, "X coordinate.")
+   FIELD(y, y, 1, "Y coordinate.")
+   FIELD(z, z, 1, "Z coordinate.")
+   FIELD(w, w, 1, "W coordinate.")
+END_IMPLEMENT_STRUCT;
 
 //-----------------------------------------------------------------------------
 // TypePoint2I
 //-----------------------------------------------------------------------------
-ConsoleType( Point2I, TypePoint2I, Point2I )
+ConsoleType(Point2I, TypePoint2I, Point2I, "")
 ImplementConsoleTypeCasters( TypePoint2I, Point2I )
 
 ConsoleGetType( TypePoint2I )
@@ -142,7 +150,7 @@ ConsoleSetType( TypePoint2I )
 //-----------------------------------------------------------------------------
 // TypePoint2F
 //-----------------------------------------------------------------------------
-ConsoleType( Point2F, TypePoint2F, Point2F )
+ConsoleType(Point2F, TypePoint2F, Point2F, "")
 ImplementConsoleTypeCasters( TypePoint2F, Point2F )
 
 ConsoleGetType( TypePoint2F )
@@ -167,7 +175,7 @@ ConsoleSetType( TypePoint2F )
 //-----------------------------------------------------------------------------
 // TypePoint3I
 //-----------------------------------------------------------------------------
-ConsoleType( Point3I, TypePoint3I, Point3I )
+ConsoleType(Point3I, TypePoint3I, Point3I, "")
 ImplementConsoleTypeCasters(TypePoint3I, Point3I)
 
 ConsoleGetType( TypePoint3I )
@@ -192,7 +200,7 @@ ConsoleSetType( TypePoint3I )
 //-----------------------------------------------------------------------------
 // TypePoint3F
 //-----------------------------------------------------------------------------
-ConsoleType( Point3F, TypePoint3F, Point3F )
+ConsoleType(Point3F, TypePoint3F, Point3F, "")
 ImplementConsoleTypeCasters(TypePoint3F, Point3F)
 
 ConsoleGetType( TypePoint3F )
@@ -217,7 +225,7 @@ ConsoleSetType( TypePoint3F )
 //-----------------------------------------------------------------------------
 // TypePoint4F
 //-----------------------------------------------------------------------------
-ConsoleType( Point4F, TypePoint4F, Point4F )
+ConsoleType(Point4F, TypePoint4F, Point4F, "")
 ImplementConsoleTypeCasters( TypePoint4F, Point4F )
 
 ConsoleGetType( TypePoint4F )
@@ -242,7 +250,7 @@ ConsoleSetType( TypePoint4F )
 //-----------------------------------------------------------------------------
 // TypeRectI
 //-----------------------------------------------------------------------------
-ConsoleType( RectI, TypeRectI, RectI )
+ConsoleType(RectI, TypeRectI, RectI, "")
 ImplementConsoleTypeCasters( TypeRectI, RectI )
 
 ConsoleGetType( TypeRectI )
@@ -269,7 +277,7 @@ ConsoleSetType( TypeRectI )
 //-----------------------------------------------------------------------------
 // TypeRectF
 //-----------------------------------------------------------------------------
-ConsoleType( RectF, TypeRectF, RectF )
+ConsoleType(RectF, TypeRectF, RectF, "")
 ImplementConsoleTypeCasters( TypeRectF, RectF )
 
 ConsoleGetType( TypeRectF )
@@ -296,7 +304,7 @@ ConsoleSetType( TypeRectF )
 //-----------------------------------------------------------------------------
 // TypeMatrix
 //-----------------------------------------------------------------------------
-ConsoleType( MatrixF, TypeMatrixF, MatrixF )
+ConsoleType(MatrixF, TypeMatrixF, MatrixF, "")
 ImplementConsoleTypeCasters( TypeMatrixF, MatrixF )
 
 // Oh merry confusion.  Torque stores matrices in row-major order yet to TorqueScript
@@ -339,7 +347,7 @@ ConsoleSetType( TypeMatrixF )
 //-----------------------------------------------------------------------------
 // TypeMatrixPosition
 //-----------------------------------------------------------------------------
-ConsoleType( MatrixPosition, TypeMatrixPosition, MatrixF )
+ConsoleType(MatrixPosition, TypeMatrixPosition, MatrixF, "")
 
 ConsoleGetType( TypeMatrixPosition )
 {
@@ -374,7 +382,7 @@ ConsoleSetType( TypeMatrixPosition )
 //-----------------------------------------------------------------------------
 // TypeMatrixRotation
 //-----------------------------------------------------------------------------
-ConsoleType( MatrixRotation, TypeMatrixRotation, MatrixF )
+ConsoleType(MatrixRotation, TypeMatrixRotation, MatrixF, "")
 
 ConsoleGetType( TypeMatrixRotation )
 {
@@ -419,7 +427,7 @@ ConsoleSetType( TypeMatrixRotation )
 //-----------------------------------------------------------------------------
 // TypeAngAxisF
 //-----------------------------------------------------------------------------
-ConsoleType( AngAxisF, TypeAngAxisF, AngAxisF )
+ConsoleType(AngAxisF, TypeAngAxisF, AngAxisF, "")
 ImplementConsoleTypeCasters( TypeAngAxisF, AngAxisF )
 
 ConsoleGetType( TypeAngAxisF )
@@ -458,7 +466,7 @@ ConsoleSetType( TypeAngAxisF )
 
 const TransformF TransformF::Identity( Point3F::Zero, AngAxisF( Point3F( 0, 0, 1 ), 0) );
 
-ConsoleType( TransformF, TypeTransformF, TransformF )
+ConsoleType(TransformF, TypeTransformF, TransformF, "")
 ImplementConsoleTypeCasters( TypeTransformF, TransformF )
 
 ConsoleGetType( TypeTransformF )
@@ -502,7 +510,7 @@ ConsoleSetType( TypeTransformF )
 //-----------------------------------------------------------------------------
 // TypeBox3F
 //-----------------------------------------------------------------------------
-ConsoleType( Box3F, TypeBox3F, Box3F )
+ConsoleType(Box3F, TypeBox3F, Box3F, "")
 ImplementConsoleTypeCasters( TypeBox3F, Box3F )
 
 ConsoleGetType( TypeBox3F )
@@ -539,7 +547,7 @@ ConsoleSetType( TypeBox3F )
 //-----------------------------------------------------------------------------
 // TypeEaseF
 //-----------------------------------------------------------------------------
-ConsoleType( EaseF, TypeEaseF, EaseF )
+ConsoleType(EaseF, TypeEaseF, EaseF, "")
 ImplementConsoleTypeCasters( TypeEaseF, EaseF )
 
 ConsoleGetType( TypeEaseF )
@@ -549,7 +557,7 @@ ConsoleGetType( TypeEaseF )
    static const U32 bufSize = 256;
    char* returnBuffer = Con::getReturnBuffer(bufSize);
    dSprintf(returnBuffer, bufSize, "%d %d %g %g",
-            pEase->dir, pEase->type, pEase->param[0], pEase->param[1]);
+            pEase->mDir, pEase->mType, pEase->mParam[0], pEase->mParam[1]);
 
    return returnBuffer;
 }
@@ -559,11 +567,11 @@ ConsoleSetType( TypeEaseF )
    EaseF* pDst = (EaseF*)dptr;
 
    // defaults...
-   pDst->param[0] = -1.0f;
-   pDst->param[1] = -1.0f;
+   pDst->mParam[0] = -1.0f;
+   pDst->mParam[1] = -1.0f;
    if (argc == 1) {
       U32 args = dSscanf(argv[0], "%d %d %f %f", // the two params are optional and assumed -1 if not present...
-                         &pDst->dir, &pDst->type, &pDst->param[0],&pDst->param[1]);
+                         &pDst->mDir, &pDst->mType, &pDst->mParam[0],&pDst->mParam[1]);
       if( args < 2 )
          Con::warnf( "Warning, EaseF probably not read properly" );
    } else {
@@ -571,10 +579,59 @@ ConsoleSetType( TypeEaseF )
    }
 }
 
+//-----------------------------------------------------------------------------
+// TypeRotationF
+//-----------------------------------------------------------------------------
+ConsoleType(RotationF, TypeRotationF, RotationF, "")
+ImplementConsoleTypeCasters( TypeRotationF, RotationF )
+
+ConsoleGetType(TypeRotationF)
+{
+   RotationF *pt = (RotationF *)dptr;
+   static const U32 bufSize = 256;
+   char* returnBuffer = Con::getReturnBuffer(bufSize);
+
+   EulerF out = pt->asEulerF(RotationF::Degrees);
+   dSprintf(returnBuffer, bufSize, "%g %g %g", out.x, out.y, out.z);
+
+   return returnBuffer;
+}
+
+ConsoleSetType(TypeRotationF)
+{
+   if (argc == 1)
+   {
+      U32 elements = StringUnit::getUnitCount(argv[0], " \t\n");
+      if (elements == 3)
+      {
+         EulerF in;
+         dSscanf(argv[0], "%g %g %g", &in.x, &in.y, &in.z);
+         ((RotationF *)dptr)->set(in, RotationF::Degrees);
+      }
+      else
+      {
+         AngAxisF in;
+         dSscanf(argv[0], "%g %g %g %g", &in.axis.x, &in.axis.y, &in.axis.z, &in.angle);
+         ((RotationF *)dptr)->set(in, RotationF::Degrees);
+      }
+   }
+   else if (argc == 3)
+   {
+      EulerF in(dAtof(argv[0]), dAtof(argv[1]), dAtof(argv[2]));
+      ((RotationF *)dptr)->set(in, RotationF::Degrees);
+   }
+   else if (argc == 4)
+   {
+      AngAxisF in(Point3F(dAtof(argv[0]), dAtof(argv[1]), dAtof(argv[2])), dAtof(argv[3]));
+      ((RotationF *)dptr)->set(in, RotationF::Degrees);
+   }
+   else
+      Con::printf("RotationF must be set as { x, y, z, w } or \"x y z w\"");
+}
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( VectorAdd, VectorF, ( VectorF a, VectorF b ),,
+DefineEngineFunction( VectorAdd, VectorF, ( VectorF a, VectorF b ),,
    "Add two vectors.\n"
    "@param a The first vector.\n"
    "@param b The second vector.\n"
@@ -602,7 +659,7 @@ DefineConsoleFunction( VectorAdd, VectorF, ( VectorF a, VectorF b ),,
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( VectorSub, VectorF, ( VectorF a, VectorF b ),,
+DefineEngineFunction( VectorSub, VectorF, ( VectorF a, VectorF b ),,
    "Subtract two vectors.\n"
    "@param a The first vector.\n"
    "@param b The second vector.\n"
@@ -632,7 +689,7 @@ DefineConsoleFunction( VectorSub, VectorF, ( VectorF a, VectorF b ),,
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( VectorScale, VectorF, ( VectorF a, F32 scalar ),,
+DefineEngineFunction( VectorScale, VectorF, ( VectorF a, F32 scalar ),,
    "Scales a vector by a scalar.\n"
    "@param a The vector to scale.\n"
    "@param scalar The scale factor.\n"
@@ -659,10 +716,70 @@ DefineConsoleFunction( VectorScale, VectorF, ( VectorF a, F32 scalar ),,
 {
    return a * scalar;
 }
+DefineEngineFunction( VectorMul, VectorF, ( VectorF a, VectorF b ),,
+   "Multiplies two vectors.\n"
+   "@param a The first vector.\n"
+   "@param b The second vector.\n"
+   "@return The vector @a a * @a b.\n\n"
+   "@tsexample\n"
+	"//-----------------------------------------------------------------------------\n"
+	"//\n"
+	"// VectorMul( %a, %b );\n"
+	"//\n"
+	"// The multiplication of vector a, (ax, ay, az), and vector b, (bx, by, bz) is:\n"
+	"//\n"
+	"//     a * b = ( ax * bx, ay * by, az * bz )\n"
+	"//\n"
+	"//-----------------------------------------------------------------------------\n\n"
+
+	"%a = \"1 0 0\";\n"
+	"%b = \"0 1 0\";\n\n"
+
+	"// %r = \"( 1 * 0, 0 * 1, 0 * 0 )\";\n"
+	"// %r = \"0 0 0\";\n"
+	"%r = VectorMul( %a, %b );\n"
+   "@endtsexample\n\n"
+   "@ingroup Vectors" )
+{
+   return a * b;
+}
+
+DefineEngineFunction( VectorDiv, VectorF, ( VectorF a, VectorF b ),,
+   "Divide two vectors.\n"
+   "@param a The first vector.\n"
+   "@param b The second vector.\n"
+   "@return The vector @a a / @a b.\n\n"
+   "@tsexample\n"
+	"//-----------------------------------------------------------------------------\n"
+	"//\n"
+	"// VectorDiv( %a, %b );\n"
+	"//\n"
+	"// The division of vector a, (ax, ay, az), and vector b, (bx, by, bz) is:\n"
+	"//\n"
+	"//     a * b = ( ax / bx, ay / by, az / bz )\n"
+	"//\n"
+	"//-----------------------------------------------------------------------------\n\n"
+
+	"%a = \"1 1 1\";\n"
+	"%b = \"2 2 2\";\n\n"
+
+	"// %r = \"( 1 / 2, 1 / 2, 1 / 2 )\";\n"
+	"// %r = \"0.5 0.5 0.5\";\n"
+	"%r = VectorDiv( %a, %b );\n"
+   "@endtsexample\n\n"
+   "@ingroup Vectors" )
+{
+   //this is kind of bad, but so is dividing by 0
+   if(b.x == 0) b.x = 0.000001f;
+   if(b.y == 0) b.y = 0.000001f;
+   if(b.z == 0) b.z = 0.000001f;
+   
+   return a / b;
+}
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( VectorNormalize, VectorF, ( VectorF v ),,
+DefineEngineFunction( VectorNormalize, VectorF, ( VectorF v ),,
    "Brings a vector into its unit form, i.e. such that it has the magnitute 1.\n"
    "@param v The vector to normalize.\n"
    "@return The vector @a v scaled to length 1.\n\n"
@@ -694,7 +811,7 @@ DefineConsoleFunction( VectorNormalize, VectorF, ( VectorF v ),,
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( VectorDot, F32, ( VectorF a, VectorF b ),,
+DefineEngineFunction( VectorDot, F32, ( VectorF a, VectorF b ),,
    "Compute the dot product of two vectors.\n"
    "@param a The first vector.\n"
    "@param b The second vector.\n"
@@ -724,7 +841,7 @@ DefineConsoleFunction( VectorDot, F32, ( VectorF a, VectorF b ),,
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( VectorCross, VectorF, ( VectorF a, VectorF b ),,
+DefineEngineFunction( VectorCross, VectorF, ( VectorF a, VectorF b ),,
    "Calculcate the cross product of two vectors.\n"
    "@param a The first vector.\n"
    "@param b The second vector.\n"
@@ -756,7 +873,7 @@ DefineConsoleFunction( VectorCross, VectorF, ( VectorF a, VectorF b ),,
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( VectorDist, F32, ( VectorF a, VectorF b ),,
+DefineEngineFunction( VectorDist, F32, ( VectorF a, VectorF b ),,
    "Compute the distance between two vectors.\n"
    "@param a The first vector.\n"
    "@param b The second vector.\n"
@@ -789,7 +906,35 @@ DefineConsoleFunction( VectorDist, F32, ( VectorF a, VectorF b ),,
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( VectorLen, F32, ( VectorF v ),,
+DefineEngineFunction( VectorMidPoint, VectorF, ( VectorF a, VectorF b ),,
+   "Gets the midpoint between the two vectors.\n"
+   "@param a The first vector.\n"
+   "@param b The second vector.\n"
+   "@return The vector (@a a + @a b) / 2.\n\n"
+   "@tsexample\n"
+      "//-----------------------------------------------------------------------------\n"
+      "//\n"
+      "// VectorMidPoint( %a, %b );\n"
+      "//\n"
+      "// The midpoint of vector a, (ax, ay, az), and vector b, (bx, by, bz) is:\n"
+      "//\n"
+	  "//     (a + b)/2 = ( (ax + bx) /2, ay + by) /2, (az + bz) /2 )\n"
+      "//\n"
+      "//-----------------------------------------------------------------------------\n"
+//      "%a = \"1 0 0\";\n"
+//      "%b = \"0 1 0\";\n\n"
+//      "// %r = \"( 1 + 0, 0 + 1, 0 + 0 )\";\n"
+//      "// %r = \"1 1 0\";\n"
+//      "%r = VectorAdd( %a, %b );\n"
+   "@endtsexample\n\n"
+   "@ingroup Vectors")
+{
+   return (a + b)/2.0f;
+}
+
+//-----------------------------------------------------------------------------
+
+DefineEngineFunction( VectorLen, F32, ( VectorF v ),,
    "Calculate the magnitude of the given vector.\n"
    "@param v A vector.\n"
    "@return The length of vector @a v.\n\n"
@@ -818,7 +963,7 @@ DefineConsoleFunction( VectorLen, F32, ( VectorF v ),,
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( VectorOrthoBasis, MatrixF, ( AngAxisF aa ),,
+DefineEngineFunction( VectorOrthoBasis, MatrixF, ( AngAxisF aa ),,
    "Create an orthogonal basis from the given vector.\n"
    "@param aaf The vector to create the orthogonal basis from.\n"
    "@return A matrix representing the orthogonal basis.\n"
@@ -832,7 +977,7 @@ DefineConsoleFunction( VectorOrthoBasis, MatrixF, ( AngAxisF aa ),,
 //-----------------------------------------------------------------------------
 
 //ConsoleFunction(VectorRot, const char*, 3, 3, "(Vector3F, float) rotate a vector in 2d")
-DefineConsoleFunction( VectorRot, const char*, (Point3F v, F32 angle), , "(Vector3F, float) rotate a vector in 2d")
+DefineEngineFunction( VectorRot, const char*, (Point3F v, F32 angle), , "(Vector3F, float) rotate a vector in 2d")
 {
 	//VectorF v(0,0,0);
 	//dSscanf(argv[1],"%g %g %g",&v.x,&v.y,&v.z);
@@ -851,7 +996,7 @@ DefineConsoleFunction( VectorRot, const char*, (Point3F v, F32 angle), , "(Vecto
 	return returnBuffer;
 }
 
-DefineConsoleFunction( VectorLerp, VectorF, ( VectorF a, VectorF b, F32 t ),,
+DefineEngineFunction( VectorLerp, VectorF, ( VectorF a, VectorF b, F32 t ),,
    "Linearly interpolate between two vectors by @a t.\n"
    "@param a Vector to start interpolation from.\n"
    "@param b Vector to interpolate to.\n"
@@ -887,9 +1032,21 @@ DefineConsoleFunction( VectorLerp, VectorF, ( VectorF a, VectorF b, F32 t ),,
    return c;
 }
 
+DefineEngineFunction(VectorReflect, VectorF, (VectorF vec, VectorF normal), ,
+   "Compute the reflection of a vector based on a normal.\n"
+   "@param a The vector.\n"
+   "@param b The normal.\n"
+   "@return The reflected vector.\n\n"
+   "@ingroup Vectors")
+{
+   normal.normalize();
+
+   return MathUtils::reflect(vec, normal);
+}
+
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( MatrixCreate, TransformF, ( VectorF position, AngAxisF orientation ),,
+DefineEngineFunction( MatrixCreate, TransformF, ( VectorF position, AngAxisF orientation ),,
    "Create a transform from the given translation and orientation.\n"
    "@param position The translation vector for the transform.\n"
    "@param orientation The axis and rotation that orients the transform.\n"
@@ -902,7 +1059,7 @@ DefineConsoleFunction( MatrixCreate, TransformF, ( VectorF position, AngAxisF or
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( MatrixCreateFromEuler, TransformF, ( Point3F angles ),,
+DefineEngineFunction( MatrixCreateFromEuler, TransformF, ( Point3F angles ),,
    "@Create a matrix from the given rotations.\n\n"
    "@param Vector3F X, Y, and Z rotation in *radians*.\n"
    "@return A transform based on the given orientation.\n"
@@ -917,7 +1074,7 @@ DefineConsoleFunction( MatrixCreateFromEuler, TransformF, ( Point3F angles ),,
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( MatrixMultiply, TransformF, ( TransformF left, TransformF right ),,
+DefineEngineFunction( MatrixMultiply, TransformF, ( TransformF left, TransformF right ),,
    "@brief Multiply the two matrices.\n\n"
    "@param left First transform.\n"
    "@param right Right transform.\n"
@@ -934,7 +1091,7 @@ DefineConsoleFunction( MatrixMultiply, TransformF, ( TransformF left, TransformF
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( MatrixMulVector, VectorF, ( TransformF transform, VectorF vector ),,
+DefineEngineFunction( MatrixMulVector, VectorF, ( TransformF transform, VectorF vector ),,
    "@brief Multiply the vector by the transform assuming that w=0.\n\n"
    "This function will multiply the given vector by the given transform such that translation will "
    "not affect the vector.\n\n"
@@ -950,7 +1107,7 @@ DefineConsoleFunction( MatrixMulVector, VectorF, ( TransformF transform, VectorF
 
 //-----------------------------------------------------------------------------
 
-DefineConsoleFunction( MatrixMulPoint, Point3F, ( TransformF transform, Point3F point ),,
+DefineEngineFunction( MatrixMulPoint, Point3F, ( TransformF transform, Point3F point ),,
    "@brief Multiply the given point by the given transform assuming that w=1.\n\n"
    "This function will multiply the given vector such that translation with take effect.\n"
    "@param transform A transform.\n"
@@ -967,7 +1124,7 @@ ConsoleFunctionGroupEnd(MatrixMath);
 
 //------------------------------------------------------------------------------
 
-DefineConsoleFunction( getBoxCenter, Point3F, ( Box3F box ),,
+DefineEngineFunction( getBoxCenter, Point3F, ( Box3F box ),,
    "Get the center point of an axis-aligned box.\n\n"
    "@param b A Box3F, in string format using \"minExtentX minExtentY minExtentZ maxExtentX maxExtentY maxExtentZ\"\n"
    "@return Center of the box.\n"
@@ -1019,7 +1176,7 @@ F32 mRandF()
    return gRandGen.randF();
 }
 
-DefineConsoleFunction( getRandom, F32, (S32 a, S32 b), (1, 0),
+DefineEngineFunction(getRandom, F32, (S32 a, S32 b), (S32_MAX, S32_MAX),
    "( int a, int b ) "
    "@brief Returns a random number based on parameters passed in..\n\n"
    "If no parameters are passed in, getRandom() will return a float between 0.0 and 1.0. If one "
@@ -1033,21 +1190,21 @@ DefineConsoleFunction( getRandom, F32, (S32 a, S32 b), (1, 0),
    "@see setRandomSeed\n"
    "@ingroup Random" )
 {
-   if (b == 0)
-      return F32(gRandGen.randI(0,getMax( a, 0 )));
-   else
+   if (a != S32_MAX)
    {
-      if (b != 0) 
+      if (b == S32_MAX)
+         return F32(gRandGen.randI(0, getMax(a, 0)));
+      else
       {
          S32 min = a;
          S32 max = b;
-         if (min > max) 
+         if (min > max)
          {
             S32 t = min;
             min = max;
             max = t;
          }
-         return F32(gRandGen.randI(min,max));
+         return F32(gRandGen.randI(min, max));
       }
    }
    return gRandGen.randF();

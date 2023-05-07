@@ -282,7 +282,6 @@ void RaiseHeightAction::process( Selection *sel, const Gui3DMouseEvent &evt, boo
       return;
 
    Point2I brushPos = brush->getPosition();
-   Point2I brushSize = brush->getSize();
    GridPoint brushGridPoint = brush->getGridPoint();
 
    Vector<GridInfo> cur; // the height at the brush position
@@ -327,7 +326,6 @@ void LowerHeightAction::process(Selection * sel, const Gui3DMouseEvent &, bool s
       return;
 
    Point2I brushPos = brush->getPosition();
-   Point2I brushSize = brush->getSize();
    GridPoint brushGridPoint = brush->getGridPoint();
 
    Vector<GridInfo> cur; // the height at the brush position
@@ -797,7 +795,7 @@ void TerrainSmoothAction::smooth( TerrainBlock *terrain, F32 factor, U32 steps )
    redo();
 }
 
-DefineConsoleMethod( TerrainSmoothAction, smooth, void, ( TerrainBlock *terrain, F32 factor, U32 steps ), , "( TerrainBlock obj, F32 factor, U32 steps )")
+DefineEngineMethod( TerrainSmoothAction, smooth, void, ( TerrainBlock *terrain, F32 factor, U32 steps ), , "( TerrainBlock obj, F32 factor, U32 steps )")
 {
 	if (terrain)
    	object->smooth( terrain, factor, mClamp( steps, 1, 13 ) );

@@ -144,6 +144,14 @@ void RenderMeshMgr::render(SceneRenderState * state)
       if( !mat )
          mat = MATMGR->getWarningMatInstance();
 
+      // Check if bin is disabled in advanced lighting.
+      // Allow forward rendering pass on custom materials.
+
+      if ( ( MATMGR->getDeferredEnabled() && mBasicOnly && !mat->isCustomMaterial() ) )
+      {
+         j++;
+         continue;
+      }
 
       U32 matListEnd = j;
       lastMiscTex = sgData.miscTex;
@@ -167,6 +175,12 @@ void RenderMeshMgr::render(SceneRenderState * state)
             matrixSet.setView(*passRI->worldToCamera);
             matrixSet.setProjection(*passRI->projection);
             mat->setTransforms(matrixSet, state);
+
+            // Setup HW skinning transforms if applicable
+            if (mat->usesHardwareSkinning())
+            {
+               mat->setNodeTransforms(passRI->mNodeTransforms, passRI->mNodeTransformCount);
+            }
 
             setupSGData( passRI, sgData );
             mat->setSceneInfo( state, sgData );
@@ -231,7 +245,7 @@ void RenderMeshMgr::render(SceneRenderState * state)
             if ( passRI->accuTex != lastAccuTex )
             {
                sgData.accuTex = passRI->accuTex;
-               lastAccuTex = lastAccuTex;
+               lastAccuTex = passRI->accuTex;
                dirty = true;
             }
 

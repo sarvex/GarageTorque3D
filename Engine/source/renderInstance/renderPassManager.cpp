@@ -51,8 +51,10 @@ const RenderInstType RenderPassManager::RIT_Terrain("Terrain");
 const RenderInstType RenderPassManager::RIT_Object("Object");      
 const RenderInstType RenderPassManager::RIT_ObjectTranslucent("ObjectTranslucent");
 const RenderInstType RenderPassManager::RIT_Decal("Decal");
+const RenderInstType RenderPassManager::RIT_DecalRoad("DecalRoad");
 const RenderInstType RenderPassManager::RIT_Water("Water");
 const RenderInstType RenderPassManager::RIT_Foliage("Foliage");
+const RenderInstType RenderPassManager::RIT_VolumetricFog("ObjectVolumetricFog");
 const RenderInstType RenderPassManager::RIT_Translucent("Translucent");
 const RenderInstType RenderPassManager::RIT_Begin("Begin");
 const RenderInstType RenderPassManager::RIT_Custom("Custom");
@@ -122,6 +124,7 @@ RenderPassManager::RenderBinEventSignal& RenderPassManager::getRenderBinSignal()
 
 void RenderPassManager::initPersistFields()
 {
+   Parent::initPersistFields();
 }
 
 RenderPassManager::RenderPassManager()
@@ -296,7 +299,7 @@ GFXTextureObject *RenderPassManager::getDepthTargetTexture()
 
       const Point2I rtSize = GFX->getActiveRenderTarget()->getSize();
       mDepthBuff.set(rtSize.x, rtSize.y, GFXFormatD24S8, 
-         &GFXDefaultZTargetProfile, avar("%s() - mDepthBuff (line %d)", __FUNCTION__, __LINE__));
+         &GFXZTargetProfile, avar("%s() - mDepthBuff (line %d)", __FUNCTION__, __LINE__));
       return mDepthBuff.getPointer();
    }
 
